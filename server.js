@@ -17,7 +17,7 @@ const io = new Server(server, {
 
 let auction = {
     title: 'Toyota Camry',
-    currentBid: 200000,
+    currentBid: 220000,
     lastUser: 'Старт',
     history: [],
 }
