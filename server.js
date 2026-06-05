@@ -68,7 +68,10 @@ app.post('/admin/start', (req, res) => {
     const now = Date.now()
 
     auction.currentBid =
-        Number(startPrice) || 220000
+    Number(startPrice) || 220000
+
+auction.lastUser = 'Старт'
+auction.history = []
 
     auction.status = 'active'
 
