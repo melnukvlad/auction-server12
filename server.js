@@ -20,19 +20,30 @@ const io = new Server(server, {
 
 let auction = {
     title: 'Volkswagen Jetta',
+
     currentBid: 220000,
+
     lastUser: 'Старт',
+
     history: [],
 
     status: 'waiting',
+
     winner: null,
 
     startTime: null,
+
     endTime: null,
 }
 
 app.post('/admin/start', (req, res) => {
-    const { password } = req.body
+    const {
+        password,
+        days,
+        hours,
+        minutes,
+        startPrice,
+    } = req.body
 
     if (password !== ADMIN_PASSWORD) {
         return res.status(403).json({
@@ -40,13 +51,32 @@ app.post('/admin/start', (req, res) => {
         })
     }
 
+    const duration =
+        Number(days || 0) *
+            24 *
+            60 *
+            60 *
+            1000 +
+        Number(hours || 0) *
+            60 *
+            60 *
+            1000 +
+        Number(minutes || 0) *
+            60 *
+            1000
+
     const now = Date.now()
 
+    auction.currentBid =
+        Number(startPrice) || 220000
+
     auction.status = 'active'
+
     auction.startTime = now
 
-    auction.endTime =
-        now + 5 * 60 * 1000
+    auction.endTime = now + duration
+
+    auction.winner = null
 
     io.emit('auction_update', auction)
 
@@ -80,6 +110,41 @@ app.post('/admin/finish', (req, res) => {
     })
 })
 
+app.post('/admin/reset', (req, res) => {
+    const { password } = req.body
+
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(403).json({
+            message: 'Wrong password',
+        })
+    }
+
+    auction = {
+        title: 'Volkswagen Jetta',
+
+        currentBid: 220000,
+
+        lastUser: 'Старт',
+
+        history: [],
+
+        status: 'waiting',
+
+        winner: null,
+
+        startTime: null,
+
+        endTime: null,
+    }
+
+    io.emit('auction_update', auction)
+
+    res.json({
+        success: true,
+        message: 'Auction reset',
+    })
+})
+
 setInterval(() => {
     if (
         auction.status === 'active' &&
@@ -109,6 +174,7 @@ io.on('connection', (socket) => {
 
         if (amount > auction.currentBid) {
             auction.currentBid = amount
+
             auction.lastUser = user
 
             auction.history.unshift({
@@ -118,10 +184,12 @@ io.on('connection', (socket) => {
             })
 
             const secondsLeft =
-                (auction.endTime - Date.now()) / 1000
+                (auction.endTime - Date.now()) /
+                1000
 
-            if (secondsLeft <= 4) {
-                auction.endTime += 10000
+            if (secondsLeft <= 3) {
+                auction.endTime =
+                    Date.now() + 10000
             }
 
             io.emit('auction_update', auction)
@@ -130,5 +198,7 @@ io.on('connection', (socket) => {
 })
 
 server.listen(5000, () => {
-    console.log('Server started on port 5000')
+    console.log(
+        'Server started on port 5000'
+    )
 })
