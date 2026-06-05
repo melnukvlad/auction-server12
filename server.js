@@ -6,6 +6,9 @@ const cors = require('cors')
 const app = express()
 
 app.use(cors())
+app.use(express.json())
+
+const ADMIN_PASSWORD = 'GMS2026'
 
 const server = http.createServer(app)
 
@@ -16,11 +19,83 @@ const io = new Server(server, {
 })
 
 let auction = {
-    title: 'Toyota Camry',
+    title: 'Volkswagen Jetta',
     currentBid: 220000,
     lastUser: 'Старт',
     history: [],
+
+    status: 'waiting',
+    winner: null,
+
+    startTime: null,
+    endTime: null,
 }
+
+app.post('/admin/start', (req, res) => {
+    const { password } = req.body
+
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(403).json({
+            message: 'Wrong password',
+        })
+    }
+
+    const now = Date.now()
+
+    auction.status = 'active'
+    auction.startTime = now
+
+    auction.endTime =
+        now + 3 * 24 * 60 * 60 * 1000
+
+    io.emit('auction_update', auction)
+
+    res.json({
+        success: true,
+        message: 'Auction started',
+    })
+})
+
+app.post('/admin/finish', (req, res) => {
+    const { password } = req.body
+
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(403).json({
+            message: 'Wrong password',
+        })
+    }
+
+    auction.status = 'finished'
+
+    auction.winner = {
+        user: auction.lastUser,
+        amount: auction.currentBid,
+    }
+
+    io.emit('auction_update', auction)
+
+    res.json({
+        success: true,
+        message: 'Auction finished',
+    })
+})
+
+setInterval(() => {
+    if (
+        auction.status === 'active' &&
+        auction.endTime &&
+        Date.now() >= auction.endTime
+    ) {
+        auction.status = 'finished'
+
+        auction.winner = {
+            user: auction.lastUser,
+            amount: auction.currentBid,
+        }
+
+        io.emit('auction_update', auction)
+    }
+}, 1000)
 
 io.on('connection', (socket) => {
     console.log('User connected')
@@ -28,6 +103,10 @@ io.on('connection', (socket) => {
     socket.emit('auction_update', auction)
 
     socket.on('place_bid', ({ user, amount }) => {
+        if (auction.status !== 'active') {
+            return
+        }
+
         if (amount > auction.currentBid) {
             auction.currentBid = amount
             auction.lastUser = user
@@ -37,6 +116,13 @@ io.on('connection', (socket) => {
                 amount,
                 time: new Date().toLocaleTimeString(),
             })
+
+            const secondsLeft =
+                (auction.endTime - Date.now()) / 1000
+
+            if (secondsLeft <= 60) {
+                auction.endTime += 30000
+            }
 
             io.emit('auction_update', auction)
         }
