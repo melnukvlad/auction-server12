@@ -46,7 +46,7 @@ app.post('/admin/start', (req, res) => {
     auction.startTime = now
 
     auction.endTime =
-        now + 3 * 24 * 60 * 60 * 1000
+        now + 10000
 
     io.emit('auction_update', auction)
 
