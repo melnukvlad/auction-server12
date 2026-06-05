@@ -46,7 +46,7 @@ app.post('/admin/start', (req, res) => {
     auction.startTime = now
 
     auction.endTime =
-        now + 10000
+        now + 5 * 60 * 1000
 
     io.emit('auction_update', auction)
 
@@ -120,7 +120,7 @@ io.on('connection', (socket) => {
             const secondsLeft =
                 (auction.endTime - Date.now()) / 1000
 
-            if (secondsLeft <= 3) {
+            if (secondsLeft <= 10) {
                 auction.endTime += 100000
             }
 
