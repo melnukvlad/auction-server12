@@ -120,8 +120,8 @@ io.on('connection', (socket) => {
             const secondsLeft =
                 (auction.endTime - Date.now()) / 1000
 
-            if (secondsLeft <= 10) {
-                auction.endTime += 100000
+            if (secondsLeft <= 4) {
+                auction.endTime += 10000
             }
 
             io.emit('auction_update', auction)
