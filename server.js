@@ -18,27 +18,24 @@ const verificationCodes = {}
 
 app.get('/send-test', async (req, res) => {
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+        const result = await resend.emails.send({
+            from: 'onboarding@resend.dev',
             to: 'superzium@gmail.com',
             subject: 'Тест аукціону',
             text: 'Пошта працює',
         })
 
-        res.json({ success: true })
+        res.json({
+            success: true,
+            result,
+        })
     } catch (error) {
-    console.log(error)
-
-    res.status(500).json({
-        success: false,
-        error: error.message,
-    })
-}
+        console.log(error)
 
         res.status(500).json({
-    success: false,
-    error: error.message,
-})
+            success: false,
+            error: error.message,
+        })
     }
 })
 
