@@ -7,6 +7,8 @@ const cors = require('cors')
 const nodemailer = require('nodemailer')
 
 const app = express()
+app.use(cors())
+app.use(express.json())
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -89,8 +91,7 @@ app.post('/verify-code', (req, res) => {
     })
 })
 
-app.use(cors())
-app.use(express.json())
+
 
 const ADMIN_PASSWORD = 'GMS2026'
 
