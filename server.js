@@ -4,21 +4,15 @@ const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
 const cors = require('cors')
-const nodemailer = require('nodemailer')
+const { Resend } = require('resend')
 
 const app = express()
 app.use(cors())
 app.use(express.json())
 
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-})
+const resend = new Resend(
+    process.env.RESEND_API_KEY
+)
 
 const verificationCodes = {}
 
@@ -57,12 +51,12 @@ app.post('/send-code', async (req, res) => {
     verificationCodes[email] = code
 
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Код підтвердження аукціону',
-            text: `Ваш код: ${code}`,
-        })
+        await resend.emails.send({
+    from: 'onboarding@resend.dev',
+    to: email,
+    subject: 'Код підтвердження аукціону',
+    text: `Ваш код: ${code}`,
+})
 
         res.json({
             success: true,
