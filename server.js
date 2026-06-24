@@ -1,9 +1,93 @@
+require('dotenv').config()
+
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
 const cors = require('cors')
+const nodemailer = require('nodemailer')
 
 const app = express()
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+})
+
+const verificationCodes = {}
+
+app.get('/send-test', async (req, res) => {
+    try {
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: 'superzium@gmail.com',
+            subject: 'Тест аукціону',
+            text: 'Пошта працює',
+        })
+
+        res.json({ success: true })
+    } catch (error) {
+        console.log(error)
+
+        res.status(500).json({
+            success: false,
+        })
+    }
+})
+
+app.post('/send-code', async (req, res) => {
+    const { email } = req.body
+
+    if (!email.endsWith('@gms-worldwide.com')) {
+        return res.status(403).json({
+            message: 'Тільки корпоративна пошта',
+        })
+    }
+
+    const code = Math.floor(
+        100000 + Math.random() * 900000
+    ).toString()
+
+    verificationCodes[email] = code
+
+    try {
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Код підтвердження аукціону',
+            text: `Ваш код: ${code}`,
+        })
+
+        res.json({
+            success: true,
+        })
+    } catch (error) {
+        console.log(error)
+
+        res.status(500).json({
+            success: false,
+        })
+    }
+})
+
+app.post('/verify-code', (req, res) => {
+    const { email, code } = req.body
+
+    if (verificationCodes[email] === code) {
+        delete verificationCodes[email]
+
+        return res.json({
+            success: true,
+        })
+    }
+
+    res.status(400).json({
+        success: false,
+        message: 'Невірний код',
+    })
+})
 
 app.use(cors())
 app.use(express.json())
@@ -175,7 +259,7 @@ io.on('connection', (socket) => {
             return
         }
 
-        if (amount > auction.currentBid) {
+        if (amount >= auction.currentBid + 4000) {
             auction.currentBid = amount
 
             auction.lastUser = user
