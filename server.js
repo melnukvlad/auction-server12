@@ -4,95 +4,10 @@ const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
 const cors = require('cors')
-const { Resend } = require('resend')
 
 const app = express()
 app.use(cors())
 app.use(express.json())
-
-const resend = new Resend(
-    process.env.RESEND_API_KEY
-)
-
-const verificationCodes = {}
-
-app.get('/send-test', async (req, res) => {
-    try {
-        const result = await resend.emails.send({
-            from: 'onboarding@resend.dev',
-            to: 'superzium@gmail.com',
-            subject: 'Тест аукціону',
-            text: 'Пошта працює',
-        })
-
-        res.json({
-            success: true,
-            result,
-        })
-    } catch (error) {
-        console.log(error)
-
-        res.status(500).json({
-            success: false,
-            error: error.message,
-        })
-    }
-})
-
-app.post('/send-code', async (req, res) => {
-    const { email } = req.body
-
-    if (!email.endsWith('@gms-worldwide.com')) {
-        return res.status(403).json({
-            message: 'Тільки корпоративна пошта',
-        })
-    }
-
-    const code = Math.floor(
-        100000 + Math.random() * 900000
-    ).toString()
-
-    verificationCodes[email] = code
-
-    try {
-        await resend.emails.send({
-    from: 'onboarding@resend.dev',
-    to: email,
-    subject: 'Код підтвердження аукціону',
-    text: `Ваш код: ${code}`,
-})
-
-        res.json({
-            success: true,
-        })
-    } catch (error) {
-        console.log(error)
-
-        res.status(500).json({
-            success: false,
-        })
-    }
-})
-
-app.post('/verify-code', (req, res) => {
-    const { email, code } = req.body
-
-    if (verificationCodes[email] === code) {
-        delete verificationCodes[email]
-
-        return res.json({
-            success: true,
-        })
-    }
-
-    res.status(400).json({
-        success: false,
-        message: 'Невірний код',
-    })
-})
-
-
-
 const ADMIN_PASSWORD = 'GMS2026'
 
 const server = http.createServer(app)
